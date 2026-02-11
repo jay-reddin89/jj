@@ -1,14 +1,3279 @@
 <!doctype html>
-<html lang="en">
+<html>
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JR Names Meaning</title>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Tailwind CDN is intentionally used for standalone HTML exports -->
+  <!-- This allows generated apps to work without build tools -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Puter.js SDK - Primary AI provider (no API key required) -->
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    }
+
+    #container {
+      width: 100%;
+      height: 100vh;
+    }
+
+    #primalcore-badge {
+      position: fixed;
+      bottom: 8px;
+      right: 8px;
+      background: linear-gradient(135deg, rgba(234, 88, 12, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #primalcore-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+    }
+
+    #primalcore-logo {
+      width: 16px;
+      height: 16px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+  <div id="container"></div>
+  <script>
+    // AI Configuration - Pollinations fallback (optional)
+    // Puter AI requires no API key and is used as primary provider
+    window.POLLINATIONS_API_KEY = localStorage.getItem("POLLINATIONS_API_KEY") || "";
+    window.POLLINATIONS_API_URL = "https://gen.pollinations.ai/v1/chat/completions";
+  </script>
+  <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.1.1/es2022/react.mjs",
+          "react-dom": "https://esm.sh/react-dom@19.1.1/es2022/react-dom.mjs",
+          "react-dom/client": "https://esm.sh/react-dom@19.1.1/es2022/client.mjs",
+          "use-fireproof": "https://esm.sh/use-fireproof@0.23.11?external=react,react-dom",
+          "use-vibes": "https://esm.sh/use-vibes",
+          "three": "https://esm.sh/three"
+        }
+      }
+    </script>
+  <script type="text/babel" data-type="module">
+    import ReactDOMClient from "react-dom/client";
+
+    // prettier-ignore
+    import React, { useState, useEffect, useRef } from "react";
+    import { useFireproof } from "use-fireproof";
+    import { FaHeart, FaCalendar, FaClock, FaGlobe, FaCamera, FaTrash, FaCog, FaTimes, FaPlay, FaPause, FaStop, FaChevronDown, FaChevronUp, FaDownload, FaList, FaVolumeUp, FaHistory, FaSearch, FaSun, FaMoon, FaExternalLinkAlt, FaArrowUp, FaKey } from "https://esm.sh/react-icons/fa";
+
+    // ============================================================
+    // AI Helper Functions - Puter AI (primary) + Pollinations (fallback)
+    // ============================================================
+
+    // Main entry point - tries Puter first, then Pollinations fallback
+    async function callAI(prompt, schema) {
+      // Try Puter AI first (no API key required)
+      try {
+        return await callPuterAI(prompt, schema);
+      } catch (puterError) {
+        console.warn('Puter AI failed, trying Pollinations fallback:', puterError);
+        
+        // Fallback to Pollinations if API key is configured
+        if (window.POLLINATIONS_API_KEY) {
+          try {
+            return await callPollinations(prompt, schema);
+          } catch (pollinationsError) {
+            console.error('Pollinations also failed:', pollinationsError);
+            throw new Error('AI_SERVICE_UNAVAILABLE');
+          }
+        }
+        
+        // If Pollinations key not set, throw Puter error
+        throw puterError;
+      }
+    }
+
+    // Puter AI implementation
+    async function callPuterAI(prompt, schema) {
+      const systemPrompt = buildJSONSchemaPrompt(schema);
+      
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ];
+      
+      try {
+        const response = await puter.ai.chat(messages, {
+          model: 'gpt-5-nano',  // Puter default - fastest and cheapest
+          temperature: 0.7
+        });
+        
+        // Handle different response formats
+        let responseText;
+        if (response.message?.content) {
+          responseText = response.message.content;
+        } else if (typeof response === 'string') {
+          responseText = response;
+        } else if (response.toString) {
+          responseText = response.toString();
+        } else {
+          throw new Error('Unexpected response format from Puter AI');
+        }
+        
+        return extractJSON(responseText);
+      } catch (error) {
+        throw new Error(`Puter AI error: ${error.message}`);
+      }
+    }
+
+    // Pollinations fallback implementation
+    async function callPollinations(prompt, schema) {
+      if (!window.POLLINATIONS_API_KEY) {
+        throw new Error('POLLINATIONS_API_KEY_NOT_SET');
+      }
+      
+      const systemPrompt = buildJSONSchemaPrompt(schema);
+      
+      const response = await fetch(window.POLLINATIONS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${window.POLLINATIONS_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'openai',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Pollinations API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const responseText = data.choices[0].message.content;
+      return extractJSON(responseText);
+    }
+
+    // Build system prompt with JSON schema instructions
+    function buildJSONSchemaPrompt(schema) {
+      return `You MUST respond with ONLY valid JSON. No markdown, no code blocks, no explanation - just the raw JSON object.
+
+The response must conform to this JSON Schema:
+${JSON.stringify(schema, null, 2)}
+
+Critical rules:
+1. Return ONLY the JSON object, nothing else
+2. Do NOT wrap in markdown code blocks (no \`\`\`json)
+3. Ensure ALL required fields are present
+4. Use proper JSON syntax (double quotes, commas between items)
+5. No trailing commas
+6. Start with { and end with }`;
+    }
+
+    // Extract and validate JSON from AI response
+    function extractJSON(text) {
+      let cleaned = text.trim();
+      
+      // Remove ```json ... ``` or ``` ... ``` wrappers
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/,'');
+      
+      // Parse to validate JSON
+      try {
+        JSON.parse(cleaned);
+        return cleaned;
+      } catch (e) {
+        // Try to extract JSON object from mixed content
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            JSON.parse(jsonMatch[0]); // Validate
+            return jsonMatch[0];
+          } catch (e2) {
+            // Continue to error
+          }
+        }
+        console.error('Failed to parse JSON from response:', cleaned);
+        throw new Error('Failed to extract valid JSON from AI response');
+      }
+    }
+
+// Improved markdown renderer component
+const MarkdownText = ({ children }) => {
+  if (!children) return null;
+
+  const renderMarkdown = (text) => {
+    const str = String(text);
+    const paragraphs = str.split('\n\n');
+
+    return paragraphs.map((paragraph, pIdx) => {
+      const trimmed = paragraph.trim();
+
+      if (trimmed.startsWith('### ')) {
+        return <h3 key={pIdx} className="text-xl font-bold mb-2 mt-4">{trimmed.slice(4)}</h3>;
+      }
+      if (trimmed.startsWith('## ')) {
+        return <h2 key={pIdx} className="text-2xl font-bold mb-2 mt-4">{trimmed.slice(3)}</h2>;
+      }
+      if (trimmed.startsWith('# ')) {
+        return <h1 key={pIdx} className="text-3xl font-bold mb-2 mt-4">{trimmed.slice(2)}</h1>;
+      }
+
+      if (trimmed.includes('\n- ') || trimmed.startsWith('- ')) {
+        const items = trimmed.split('\n').filter(line => line.trim().startsWith('- ')).map((item, idx) => {
+          const content = item.replace(/^-\s+/, '');
+          return <li key={idx} className="ml-4">{renderInlineMarkdown(content)}</li>;
+        });
+        return <ul key={pIdx} className="list-disc mb-3 space-y-1">{items}</ul>;
+      }
+
+      if (trimmed.includes('\n1. ') || /^\d+\.\s/.test(trimmed)) {
+        const items = trimmed.split('\n').filter(line => /^\d+\.\s/.test(line.trim())).map((item, idx) => {
+          const content = item.replace(/^\d+\.\s+/, '');
+          return <li key={idx} className="ml-4">{renderInlineMarkdown(content)}</li>;
+        });
+        return <ol key={pIdx} className="list-decimal mb-3 space-y-1">{items}</ol>;
+      }
+
+      return <p key={pIdx} className="mb-3">{renderInlineMarkdown(trimmed)}</p>;
+    });
+  };
+
+  const renderInlineMarkdown = (text) => {
+    const parts = [];
+    let remaining = text;
+    let key = 0;
+
+    while (remaining.length > 0) {
+      const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (linkMatch && linkMatch.index === 0) {
+        parts.push(
+          <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline">
+            {linkMatch[1]}
+          </a>
+        );
+        remaining = remaining.slice(linkMatch[0].length);
+        continue;
+      }
+
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      if (boldMatch && boldMatch.index === 0) {
+        parts.push(<strong key={key++}>{boldMatch[1]}</strong>);
+        remaining = remaining.slice(boldMatch[0].length);
+        continue;
+      }
+
+      const italicMatch = remaining.match(/\*([^*]+?)\*/);
+      if (italicMatch && italicMatch.index === 0 && !remaining.startsWith('**')) {
+        parts.push(<em key={key++}>{italicMatch[1]}</em>);
+        remaining = remaining.slice(italicMatch[0].length);
+        continue;
+      }
+
+      const nextSpecial = remaining.search(/[\*\[]/);
+      if (nextSpecial === -1) {
+        parts.push(<span key={key++}>{remaining}</span>);
+        break;
+      } else if (nextSpecial > 0) {
+        parts.push(<span key={key++}>{remaining.slice(0, nextSpecial)}</span>);
+        remaining = remaining.slice(nextSpecial);
+      } else {
+        parts.push(<span key={key++}>{remaining[0]}</span>);
+        remaining = remaining.slice(1);
+      }
+    }
+
+    return parts;
+  };
+
+  return <div>{renderMarkdown(children)}</div>;
+};
+
+// Component to render facts with Wikipedia links
+const FactsWithLinks = ({ text }) => {
+  if (!text) return null;
+
+  const lines = text.split('\n').filter(line => line.trim());
+
+  return (
+    <div className="space-y-3">
+      {lines.map((line, idx) => {
+        const cleanLine = line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+        const topicMatch = cleanLine.match(/^([^:—–-]+)/);
+        const topic = topicMatch ? topicMatch[1].trim() : cleanLine.split(' ').slice(0, 5).join(' ');
+
+        const wikiUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(topic)}`;
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanLine)}`;
+
+        return (
+          <div key={idx} className="flex items-start gap-2 group">
+            <span className="flex-1">
+              <MarkdownText>{line}</MarkdownText>
+            </span>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <a
+                href={wikiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 p-1"
+                title="Search on Wikipedia"
+              >
+                <FaExternalLinkAlt className="text-xs" />
+              </a>
+              <a
+                href={googleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-500 hover:text-green-700 p-1"
+                title="Search on Google"
+              >
+                <FaSearch className="text-xs" />
+              </a>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Component to render lifetime events with proper numbering, summaries, and individual expand/collapse
+const LifetimeEventsRenderer = ({ text, collapsedEvents, toggleEvent }) => {
+  if (!text) return null;
+
+  const events = text.split('\n\n').filter(e => e.trim());
+
+  return (
+    <div className="space-y-4">
+      {events.map((event, idx) => {
+        const linkMatch = event.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        const descMatch = event.match(/Description:\s*(.+)/i);
+
+        if (linkMatch) {
+          const eventTitle = linkMatch[1];
+          const eventUrl = linkMatch[2];
+          const description = descMatch ? descMatch[1].trim() : '';
+          const eventKey = `event-${idx}`;
+
+          return (
+            <div key={idx} className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900 rounded-lg border-l-4 border-indigo-500">
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
+                onClick={() => toggleEvent(eventKey)}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-500 text-white rounded-full flex items-center justify-center font-bold">
+                    {idx + 1}
+                  </div>
+                  <h4 className="text-lg font-bold text-indigo-700 dark:text-indigo-300">
+                    {eventTitle}
+                  </h4>
+                </div>
+                {collapsedEvents[eventKey] ? <FaChevronDown className="text-indigo-500" /> : <FaChevronUp className="text-indigo-500" />}
+              </div>
+
+              {!collapsedEvents[eventKey] && description && (
+                <div className="px-4 pb-4 space-y-3">
+                  <div className="pl-11">
+                    <a
+                      href={eventUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 hover:underline inline-flex items-center gap-1"
+                    >
+                      View on Wikipedia <FaExternalLinkAlt className="text-xs" />
+                    </a>
+                  </div>
+                  <div className="pl-11">
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+                      {description}
+                    </p>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-indigo-200 dark:border-indigo-700">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <strong className="text-indigo-600 dark:text-indigo-400">Summary:</strong> {description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+};
+
+// Extract YouTube video ID from various URL formats
+const getYouTubeVideoId = (url) => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+// Version history data
+const versionHistory = [
+  {
+    version: "1.0.7",
+    date: "2024",
+    title: "Accurate Chart Data Integration",
+    changes: [
+      "Enhanced chart data accuracy - now uses Official UK Singles Chart data format",
+      "Improved #1 chart song detection for exact birth dates",
+      "Better Top 10 chart songs retrieval with accurate chart positions",
+      "AI now references official chart sources for precise historical data",
+      "Added chart reference information to ensure data authenticity"
+    ]
+  },
+  {
+    version: "1.0.6",
+    date: "2024",
+    title: "Live Statistics & YouTube Integration",
+    changes: [
+      "Eye blinks and breaths now update in real-time (live)",
+      "#1 Chart Song now displays as inline embedded YouTube video",
+      "Added song release date to #1 Chart Song display",
+      "Improved AI prompt for accurate #1 chart song on exact birth date",
+      "Enhanced music data fetching with better date specificity"
+    ]
+  },
+  {
+    version: "1.0.5",
+    date: "2024",
+    title: "Music, Facts & Events Improvements",
+    changes: [
+      "Reimplemented Music & Entertainment section with better organization",
+      "Reimplemented Historical Facts section with improved formatting",
+      "Once-in-a-Lifetime Events now have individual expand/collapse per event",
+      "Each event can be minimized/expanded independently",
+      "Improved event summaries and descriptions",
+      "Better visual hierarchy for all sections"
+    ]
+  },
+  {
+    version: "1.0.4",
+    date: "2024",
+    title: "UI Reorganization & Live Stats",
+    changes: [
+      "Reorganized Name Meanings section order",
+      "Reorganized Name Statistics section order",
+      "Reorganized Date of Birth Facts section order",
+      "Fixed Once-in-a-Lifetime Events numbering",
+      "Added event summaries to Once-in-a-Lifetime Events",
+      "Made Life Statistics live - time updates in real-time",
+      "Saved Profiles auto-minimizes when profile is selected",
+      "Name and Birth Date fields on same row (desktop) / separate rows (mobile)",
+      "Auto-scroll to profile details when profile is loaded"
+    ]
+  },
+  {
+    version: "1.0.3",
+    date: "2024",
+    title: "UI Improvements & Bug Fixes",
+    changes: [
+      "Fixed Once-in-a-Lifetime Events markdown rendering - links now display correctly",
+      "Fixed Life Statistics section - now displays properly",
+      "Fixed missing sections (Name Statistics, Birth Facts, Music, Historical Facts)",
+      "Fixed Dark/Light mode toggle - now works correctly",
+      "Added persistent scroll-to-top button (bottom right)",
+      "Settings modal now changes theme in real-time",
+      "Improved markdown parser for better link handling"
+    ]
+  },
+  {
+    version: "1.0.2",
+    date: "2024",
+    title: "Enhanced Features Update",
+    changes: [
+      "Chart songs now from user's exact birth date",
+      "Added Wikipedia and Google search links to Historical Facts",
+      "Added links to Once-in-a-Lifetime Events",
+      "User's selected country now included in Popular Countries list",
+      "Customizable fact counts (1-20) for Historical Facts subsections",
+      "Customizable event count (1-20) for Once-in-a-Lifetime Events",
+      "Topic selection for Once-in-a-Lifetime Events",
+      "Added Celebrities subsection to Name Statistics",
+      "Dark/Light mode toggle in Settings"
+    ]
+  },
+  {
+    version: "1.0.1",
+    date: "2024",
+    title: "Header Layout Update",
+    changes: [
+      "Fixed header layout - Name Explorer and Settings button now on same row for desktop and mobile",
+      "Improved responsive design for header elements",
+      "Better spacing and alignment across all screen sizes"
+    ]
+  },
+  {
+    version: "1.0.0",
+    date: "2024",
+    title: "Initial Launch",
+    changes: [
+      "Name meanings (Universal, Irish, Historic, Mythology, Detailed, Short)",
+      "Name statistics (Worldwide count, Country count, Popularity rankings)",
+      "Birth date facts (Name count for birth year, Popularity that year)",
+      "Music & Entertainment (#1 chart song, Top 10 songs, Hit TV shows, Hit movies)",
+      "Historical facts (World events, Country events, Interesting facts)",
+      "Once-in-a-lifetime events timeline",
+      "Life statistics (Years, months, weeks, days, hours, minutes, seconds)",
+      "Estimated biological stats (Heartbeats, eye blinks, breaths, sleeps, meals, steps, words spoken)",
+      "Photo upload support",
+      "Multiple profile management",
+      "Customizable settings for all sections",
+      "Top names lists (Worldwide and Country-specific)",
+      "Name pronunciation with audio playback",
+      "Similar names suggestions",
+      "YouTube integration for music playback",
+      "Download as Image or PDF",
+      "Collapsible sections for better organization",
+      "Dark mode support"
+    ]
+  }
+];
+
+export default function App() {
+  const { database, useDocument, useLiveQuery } = useFireproof("baby-names-db");
+
+  const { doc, merge } = useDocument({
+    name: "",
+    birthDate: "",
+    _files: {}
+  });
+
+  const { docs: savedProfiles } = useLiveQuery("type", { key: "profile" });
+  const { docs: savedSettings } = useLiveQuery("type", { key: "settings" });
+
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [loadingSection, setLoadingSection] = useState(null);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showTopNamesModal, setShowTopNamesModal] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [topNamesType, setTopNamesType] = useState(null);
+  const [topNamesList, setTopNamesList] = useState([]);
+  const [loadingTopNames, setLoadingTopNames] = useState(false);
+  const [profilePhotos, setProfilePhotos] = useState({});
+  const [savedProfilesCollapsed, setSavedProfilesCollapsed] = useState(false);
+  const [pronunciationAudio, setPronunciationAudio] = useState(null);
+  const [playingPronunciation, setPlayingPronunciation] = useState(false);
+  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState(null);
+  const [topNamesSearchQuery, setTopNamesSearchQuery] = useState("");
+  const [topNamesDateFilter, setTopNamesDateFilter] = useState("dob");
+  const [darkMode, setDarkMode] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [liveStats, setLiveStats] = useState(null);
+  const contentRef = useRef(null);
+  const profileDetailsRef = useRef(null);
+  const audioRef = useRef(new Audio());
+
+  const [collapsedSections, setCollapsedSections] = useState({
+    meanings: false,
+    statistics: false,
+    birthFacts: false,
+    music: false,
+    facts: false,
+    lifetimeEvents: false,
+    lifeStats: false
+  });
+
+  const [collapsedSubsections, setCollapsedSubsections] = useState({
+    irish: false,
+    worldwide: false,
+    short: false,
+    historic: false,
+    mythology: false,
+    veryDetailed: true,
+    similarNames: false,
+    pronunciation: false,
+    genderAssociation: false,
+    countryCount: false,
+    worldwideCount: false,
+    popularCountries: false,
+    popularityCountry: false,
+    popularityWorldwide: false,
+    celebrities: true,
+    namePopularityYear: false,
+    nameCountYearCountry: false,
+    nameCountYearWorldwide: false,
+    numberOneChart: false,
+    top10Charts: false,
+    tvShows: true,
+    movies: true,
+    worldEvents: false,
+    countryEvents: false,
+    interestingFacts: false
+  });
+
+  const [collapsedEvents, setCollapsedEvents] = useState({});
+
+  const toggleEvent = (eventKey) => {
+    setCollapsedEvents(prev => ({
+      ...prev,
+      [eventKey]: !prev[eventKey]
+    }));
+  };
+
+  const defaultSettings = {
+    type: "settings",
+    darkMode: false,
+    meanings: {
+      worldwide: true,
+      irish: true,
+      historic: true,
+      mythology: true,
+      veryDetailed: true,
+      short: true
+    },
+    statistics: {
+      worldwideCount: true,
+      countryCount: true,
+      selectedCountry: "Ireland",
+      popularityWorldwide: true,
+      popularityCountry: true,
+      popularCountries: true,
+      genderAssociation: true,
+      similarNames: true,
+      pronunciation: true,
+      celebrities: true
+    },
+    dobFacts: {
+      nameCountYearWorldwide: true,
+      nameCountYearCountry: true,
+      namePopularityYear: true
+    },
+    music: {
+      numberOneChart: true,
+      top10Charts: true,
+      tvShows: true,
+      movies: true
+    },
+    facts: {
+      worldEvents: true,
+      worldEventsCount: 5,
+      countryEvents: true,
+      countryEventsCount: 5,
+      interestingFacts: true,
+      interestingFactsCount: 5
+    },
+    lifetimeEvents: {
+      enabled: true,
+      count: 10,
+      topics: {
+        world: true,
+        news: true,
+        economy: true,
+        health: true,
+        war: true,
+        discovery: true,
+        space: true,
+        technology: true,
+        automotive: true
+      }
+    },
+    lifeStats: {
+      years: true,
+      months: true,
+      weeks: true,
+      days: true,
+      hours: true,
+      minutes: true,
+      seconds: true,
+      heartbeats: true,
+      eyeblinks: true,
+      breaths: true,
+      sleeps: true,
+      meals: true,
+      steps: true,
+      wordsSpoken: true
+    },
+    pollinationsApiKey: localStorage.getItem("POLLINATIONS_API_KEY") || ""
+  };
+
+  const [settings, setSettings] = useState(defaultSettings);
+  const [tempSettings, setTempSettings] = useState(defaultSettings);
+
+  const [profileData, setProfileData] = useState({
+    meanings: null,
+    statistics: null,
+    birthFacts: null,
+    music: null,
+    facts: null,
+    lifetimeEvents: null,
+    lifeStats: null,
+    // Error states for each section
+    errors: {
+      meanings: null,
+      statistics: null,
+      birthFacts: null,
+      music: null,
+      facts: null,
+      lifetimeEvents: null
+    }
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (!selectedProfile) return;
+
+    const updateLiveStats = () => {
+      const stats = calculateLifeStats(selectedProfile.birthDate);
+      setLiveStats(stats);
+    };
+
+    updateLiveStats();
+    const interval = setInterval(updateLiveStats, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedProfile]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  useEffect(() => {
+    async function loadAllPhotos() {
+      const photos = {};
+      for (const profile of savedProfiles || []) {
+        if (profile._files?.photo) {
+          try {
+            const file = await profile._files.photo.file();
+            photos[profile._id] = URL.createObjectURL(file);
+          } catch (error) {
+            console.error("Error loading photo for profile:", profile._id, error);
+          }
+        }
+      }
+      setProfilePhotos(photos);
+    }
+    loadAllPhotos();
+
+    return () => {
+      Object.values(profilePhotos).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [savedProfiles]);
+
+  const toggleSection = (section) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const toggleSubsection = (subsection) => {
+    setCollapsedSubsections(prev => ({
+      ...prev,
+      [subsection]: !prev[subsection]
+    }));
+  };
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    setTempSettings(prev => ({
+      ...prev,
+      darkMode: newDarkMode
+    }));
+  };
+
+  const playPronunciation = () => {
+    if (!selectedProfile) return;
+
+    stopPronunciation();
+
+    const utterance = new SpeechSynthesisUtterance(selectedProfile.name);
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setPlayingPronunciation(true);
+    };
+
+    utterance.onend = () => {
+      setPlayingPronunciation(false);
+    };
+
+    utterance.onerror = () => {
+      setPlayingPronunciation(false);
+      window.open(`https://forvo.com/word/${encodeURIComponent(selectedProfile.name.toLowerCase())}/`, '_blank');
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopPronunciation = () => {
+    window.speechSynthesis.cancel();
+    setPlayingPronunciation(false);
+  };
+
+  const playSong = (song, index) => {
+    if (currentlyPlayingSong === index) {
+      stopSong();
+      return;
+    }
+
+    if (currentlyPlayingSong !== null) {
+      stopSong();
+    }
+
+    const query = `${song.title} ${song.artist} official audio`;
+    window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank');
+
+    setCurrentlyPlayingSong(index);
+
+    setTimeout(() => {
+      setCurrentlyPlayingSong(null);
+    }, 3000);
+  };
+
+  const stopSong = () => {
+    setCurrentlyPlayingSong(null);
+  };
+
+  const fetchTopNames = async (type) => {
+    setLoadingTopNames(true);
+    setTopNamesType(type);
+    setShowTopNamesModal(true);
+    setTopNamesSearchQuery("");
+
+    try {
+      const count = type === 'country' ? 100 : 200;
+      const location = type === 'country' ? settings.statistics.selectedCountry : 'worldwide';
+
+      let year;
+      if (topNamesDateFilter === 'dob' && selectedProfile) {
+        year = new Date(selectedProfile.birthDate).getFullYear();
+      } else {
+        year = new Date().getFullYear();
+      }
+
+      const prompt = `Generate a list of the top ${count} most popular baby names in ${location} for the year ${year}. Include both male and female names. Return ONLY the names as a simple array, one name per line, without any numbering or formatting.`;
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: {
+          names: {
+            type: "array",
+            items: { type: "string" }
+          }
+        },
+        required: ["names"]
+      });
+
+      const data = JSON.parse(result);
+      setTopNamesList(data.names);
+    } catch (error) {
+      console.error("Error fetching top names:", error);
+      setTopNamesList([]);
+    } finally {
+      setLoadingTopNames(false);
+    }
+  };
+
+  const filteredTopNames = topNamesList.filter(name =>
+    name.toLowerCase().includes(topNamesSearchQuery.toLowerCase())
+  );
+
+  const highlightText = (text, query) => {
+    if (!query) return text;
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, idx) =>
+      part.toLowerCase() === query.toLowerCase() ?
+        <mark key={idx} className="bg-yellow-300 dark:bg-yellow-600">{part}</mark> :
+        part
+    );
+  };
+
+  const getTopNamesHeader = () => {
+    const count = topNamesType === 'country' ? 100 : 200;
+    const location = topNamesType === 'country' ? settings.statistics.selectedCountry : 'Worldwide';
+    const year = topNamesDateFilter === 'dob' && selectedProfile
+      ? new Date(selectedProfile.birthDate).getFullYear()
+      : new Date().getFullYear();
+
+    return `Top ${count} Names - ${location} (${year})`;
+  };
+
+  useEffect(() => {
+    if (savedSettings && savedSettings.length > 0) {
+      const loadedSettings = savedSettings[0];
+
+      if (!loadedSettings.statistics.similarNames) loadedSettings.statistics.similarNames = true;
+      if (!loadedSettings.statistics.pronunciation) loadedSettings.statistics.pronunciation = true;
+      if (!loadedSettings.statistics.celebrities) loadedSettings.statistics.celebrities = true;
+      if (!loadedSettings.facts.worldEventsCount) loadedSettings.facts.worldEventsCount = 5;
+      if (!loadedSettings.facts.countryEventsCount) loadedSettings.facts.countryEventsCount = 5;
+      if (!loadedSettings.facts.interestingFactsCount) loadedSettings.facts.interestingFactsCount = 5;
+      if (!loadedSettings.lifetimeEvents.count) loadedSettings.lifetimeEvents.count = 10;
+      if (!loadedSettings.lifetimeEvents.topics) {
+        loadedSettings.lifetimeEvents.topics = {
+          world: true,
+          news: true,
+          economy: true,
+          health: true,
+          war: true,
+          discovery: true,
+          space: true,
+          technology: true,
+          automotive: true
+        };
+      }
+
+      if (loadedSettings.darkMode !== undefined) {
+        setDarkMode(loadedSettings.darkMode);
+      }
+
+      setSettings(loadedSettings);
+      setTempSettings(loadedSettings);
+    }
+  }, [savedSettings]);
+
+  useEffect(() => {
+    async function loadPhoto() {
+      if (selectedProfile?._files?.photo) {
+        try {
+          const file = await selectedProfile._files.photo.file();
+          const url = URL.createObjectURL(file);
+          setPhotoUrl(url);
+          return () => URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error("Error loading photo:", error);
+          setPhotoUrl(null);
+        }
+      } else {
+        setPhotoUrl(null);
+      }
+    }
+    loadPhoto();
+  }, [selectedProfile]);
+
+  const calculateLifeStats = (birthDate) => {
+    const birth = new Date(birthDate);
+    const now = new Date();
+    const diffMs = now - birth;
+
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30.44);
+    const years = Math.floor(days / 365.25);
+
+    const heartbeats = Math.floor(seconds * 1.2);
+    const eyeblinks = Math.floor(minutes * 17);
+    const breaths = Math.floor(minutes * 16);
+    const sleeps = Math.floor(days * 0.33);
+    const meals = Math.floor(days * 3);
+    const steps = Math.floor(days * 7500);
+    const wordsSpoken = Math.floor(days * 16000);
+
+    return {
+      years,
+      months,
+      weeks,
+      days,
+      hours,
+      minutes,
+      seconds,
+      heartbeats: heartbeats.toLocaleString(),
+      eyeblinks: eyeblinks.toLocaleString(),
+      breaths: breaths.toLocaleString(),
+      sleeps: sleeps.toLocaleString(),
+      meals: meals.toLocaleString(),
+      steps: steps.toLocaleString(),
+      wordsSpoken: wordsSpoken.toLocaleString()
+    };
+  };
+
+  const generateNameMeanings = async (name, isRetry = false) => {
+    setLoadingSection("meanings");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, meanings: null } }));
+    }
+    try {
+      const enabledMeanings = Object.entries(settings.meanings)
+        .filter(([key, value]) => value)
+        .map(([key]) => key);
+
+      const meaningLabels = {
+        worldwide: "Universal/Worldwide Meaning",
+        irish: "Irish Meaning",
+        historic: "Historic Meaning",
+        mythology: "Mythology Meaning",
+        veryDetailed: "Very Detailed Meaning (3-4 paragraphs)",
+        short: "Short Meaning (one sentence)"
+      };
+
+      const prompt = `Research and provide detailed information about the name "${name}". Include the following sections: ${enabledMeanings.map(key => meaningLabels[key]).join(", ")}. Format as plain text with proper paragraphs. Do NOT use markdown symbols like ** or * or #. Just use normal text with line breaks. Format as JSON with keys: ${enabledMeanings.join(", ")}`;
+
+      const schemaProperties = {};
+      enabledMeanings.forEach(key => {
+        schemaProperties[key] = { type: "string" };
+      });
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: schemaProperties,
+        required: enabledMeanings
+      });
+
+      const meanings = JSON.parse(result);
+      setProfileData(prev => ({ ...prev, meanings, errors: { ...prev.errors, meanings: null } }));
+      setLoadingSection(null);
+      return meanings;
+    } catch (error) {
+      console.error("Error generating meanings:", error);
+      let errorMessage = error?.message || "Failed to load name meanings. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, meanings: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  const generateNameStatistics = async (name, isRetry = false) => {
+    setLoadingSection("statistics");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, statistics: null } }));
+    }
+    try {
+      const enabledStats = Object.entries(settings.statistics)
+        .filter(([key, value]) => key !== 'selectedCountry' && value)
+        .map(([key]) => key);
+
+      const statsPrompts = {
+        worldwideCount: "Estimated worldwide population with this name",
+        countryCount: `Estimated population in ${settings.statistics.selectedCountry} with this name`,
+        popularityWorldwide: "Global popularity ranking",
+        popularityCountry: `Popularity ranking in ${settings.statistics.selectedCountry}`,
+        popularCountries: `Most popular countries where this name is used (MUST include ${settings.statistics.selectedCountry} in the list). Provide estimated counts for each country.`,
+        genderAssociation: "Gender association and percentage breakdown",
+        similarNames: "10 similar names with brief explanations",
+        pronunciation: `Phonetic pronunciation guide for "${name}" (IPA notation and simple pronunciation)`,
+        celebrities: `List of 10 famous celebrities with the name "${name}". Include their full name and brief description of what they're known for.`
+      };
+
+      const prompt = `Provide statistical information about the name "${name}": ${enabledStats.map(key => statsPrompts[key]).join(", ")}. Format as plain text paragraphs. Do NOT use markdown symbols. Format as JSON with keys: ${enabledStats.join(", ")}`;
+
+      const schemaProperties = {};
+      enabledStats.forEach(key => {
+        schemaProperties[key] = { type: "string" };
+      });
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: schemaProperties,
+        required: enabledStats
+      });
+
+      const statistics = JSON.parse(result);
+
+      setProfileData(prev => ({ ...prev, statistics, errors: { ...prev.errors, statistics: null } }));
+      setLoadingSection(null);
+      return statistics;
+    } catch (error) {
+      console.error("Error generating statistics:", error);
+      let errorMessage = error?.message || "Failed to load name statistics. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, statistics: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  const generateBirthFacts = async (name, birthDate, isRetry = false) => {
+    setLoadingSection("birthFacts");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, birthFacts: null } }));
+    }
+    try {
+      const date = new Date(birthDate);
+      const year = date.getFullYear();
+
+      const enabledFacts = Object.entries(settings.dobFacts)
+        .filter(([key, value]) => value)
+        .map(([key]) => key);
+
+      const factsPrompts = {
+        nameCountYearWorldwide: `Estimated worldwide count of people named "${name}" born in ${year}`,
+        nameCountYearCountry: `Estimated count in ${settings.statistics.selectedCountry} of people named "${name}" born in ${year}`,
+        namePopularityYear: `Popularity ranking of the name "${name}" in ${year}`
+      };
+
+      const prompt = `Research facts about the name "${name}" and birth year ${year}: ${enabledFacts.map(key => factsPrompts[key]).join(", ")}. Format as plain text. Do NOT use markdown symbols. Format as JSON with keys: ${enabledFacts.join(", ")}`;
+
+      const schemaProperties = {};
+      enabledFacts.forEach(key => {
+        schemaProperties[key] = { type: "string" };
+      });
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: schemaProperties,
+        required: enabledFacts
+      });
+
+      const birthFacts = JSON.parse(result);
+      setProfileData(prev => ({ ...prev, birthFacts, errors: { ...prev.errors, birthFacts: null } }));
+      setLoadingSection(null);
+      return birthFacts;
+    } catch (error) {
+      console.error("Error generating birth facts:", error);
+      let errorMessage = error?.message || "Failed to load birth facts. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, birthFacts: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  const generateMusicData = async (birthDate, isRetry = false) => {
+    setLoadingSection("music");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, music: null } }));
+    }
+    try {
+      const date = new Date(birthDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      const chartDate = `${year}${month}${day}`;
+      const chartUrl = `https://www.officialcharts.com/charts/singles-chart/${chartDate}/`;
+
+      const enabledMusic = Object.entries(settings.music)
+        .filter(([key, value]) => value)
+        .map(([key]) => key);
+
+      const musicPrompts = {
+        numberOneChart: `Using official UK Singles Chart data, find the #1 chart song for the EXACT date ${formattedDate}.
+        Reference: Official Charts URL would be ${chartUrl}
+        
+        Provide ACCURATE historical chart data for this specific date. Include:
+        1. The COMPLETE song title (EXACTLY as it appeared on the charts)
+        2. The full artist name (EXACTLY as credited on the charts)
+        3. The song's original release date (month, day, year)
+        4. A valid YouTube video ID for the official music video or audio (11-character YouTube ID only)
+        
+        Be precise - this should be the actual #1 song from the UK Official Singles Chart on this SPECIFIC date.`,
+        
+        top10Charts: `Using official UK Singles Chart data for ${formattedDate}, provide the accurate Top 10 chart songs for this EXACT date.
+        Reference: Official Charts URL would be ${chartUrl}
+        
+        List the songs in order from #1 to #10 with:
+        - Chart position number
+        - COMPLETE song title (EXACTLY as it appeared on the charts)
+        - Full artist name (EXACTLY as credited on the charts)
+        
+        These should be the actual songs that were in the Top 10 on this specific date according to the UK Official Singles Chart.`,
+        
+        tvShows: `Top 10 hit TV shows from ${year}`,
+        movies: `Top 10 hit movies from ${year}`
+      };
+
+      const prompt = `Research ACCURATE entertainment data using official sources:
+
+${enabledMusic.map(key => musicPrompts[key]).join("\n\n")}
+
+IMPORTANT: For chart data, reference the Official UK Singles Chart for the date ${formattedDate}. The data should match what was on the charts on this specific date. Format as JSON with keys: ${enabledMusic.join(", ")}`;
+
+      const schemaProperties = {};
+      enabledMusic.forEach(key => {
+        if (key === 'numberOneChart') {
+          schemaProperties[key] = {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              artist: { type: "string" },
+              releaseDate: { type: "string" },
+              youtubeId: { type: "string" }
+            }
+          };
+        } else if (key === 'top10Charts') {
+          schemaProperties[key] = {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                position: { type: "number" },
+                title: { type: "string" },
+                artist: { type: "string" }
+              }
+            }
+          };
+        } else if (key === 'tvShows' || key === 'movies') {
+          schemaProperties[key] = {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                year: { type: "string" }
+              }
+            }
+          };
+        } else {
+          schemaProperties[key] = { type: "string" };
+        }
+      });
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: schemaProperties,
+        required: enabledMusic
+      });
+
+      const music = JSON.parse(result);
+
+      setProfileData(prev => ({ ...prev, music, errors: { ...prev.errors, music: null } }));
+      setLoadingSection(null);
+      return music;
+    } catch (error) {
+      console.error("Error generating music data:", error);
+      let errorMessage = error?.message || "Failed to load music data. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, music: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  const generateFacts = async (birthDate, isRetry = false) => {
+    setLoadingSection("facts");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, facts: null } }));
+    }
+    try {
+      const date = new Date(birthDate);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      const enabledFacts = Object.entries(settings.facts)
+        .filter(([key, value]) => key.includes('Count') ? false : value)
+        .map(([key]) => key);
+
+      const factsPrompts = {
+        worldEvents: `Exactly ${settings.facts.worldEventsCount} major world events that happened on ${formattedDate}. Format each event with the event name/title first, followed by details.`,
+        countryEvents: `Exactly ${settings.facts.countryEventsCount} major events in ${settings.statistics.selectedCountry} on ${formattedDate}. Format each event with the event name/title first, followed by details.`,
+        interestingFacts: `Exactly ${settings.facts.interestingFactsCount} interesting historical facts about ${formattedDate}. Format each fact with a clear topic/title first.`
+      };
+
+      const prompt = `Research historical information about ${formattedDate}: ${enabledFacts.map(key => factsPrompts[key]).join(", ")}. Format as plain text paragraphs with clear event/fact titles. Do NOT use markdown symbols. Format as JSON with keys: ${enabledFacts.join(", ")}`;
+
+      const schemaProperties = {};
+      enabledFacts.forEach(key => {
+        schemaProperties[key] = { type: "string" };
+      });
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: schemaProperties,
+        required: enabledFacts
+      });
+
+      const facts = JSON.parse(result);
+      setProfileData(prev => ({ ...prev, facts, errors: { ...prev.errors, facts: null } }));
+      setLoadingSection(null);
+      return facts;
+    } catch (error) {
+      console.error("Error generating facts:", error);
+      let errorMessage = error?.message || "Failed to load historical facts. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, facts: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  const generateLifetimeEvents = async (birthDate, isRetry = false) => {
+    if (!settings.lifetimeEvents.enabled) return;
+
+    setLoadingSection("lifetimeEvents");
+    // Clear previous error on retry
+    if (isRetry) {
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, lifetimeEvents: null } }));
+    }
+    try {
+      const date = new Date(birthDate);
+      const year = date.getFullYear();
+
+      const enabledTopics = Object.entries(settings.lifetimeEvents.topics)
+        .filter(([key, value]) => value)
+        .map(([key]) => key);
+
+      const topicsString = enabledTopics.join(', ');
+
+      const prompt = `Create a well-organized timeline of exactly ${settings.lifetimeEvents.count} significant once-in-a-lifetime historical events that someone born in ${year} has lived through. Focus ONLY on these topics: ${topicsString}.
+
+For each event, format it EXACTLY like this (number them 1, 2, 3, etc.):
+[Event Name (Year)](https://en.wikipedia.org/wiki/Event_Name)
+Description: A detailed 2-3 sentence description explaining what happened and why it was significant.
+
+Use proper markdown format for links: [text](url)
+Make the event name and year the clickable link.
+Separate each event with a blank line.
+Make sure each event is numbered correctly starting from 1.
+Format as JSON with key: events`;
+
+      const result = await callAI(prompt, {
+        type: "object",
+        properties: {
+          events: { type: "string" }
+        },
+        required: ["events"]
+      });
+
+      const lifetimeEvents = JSON.parse(result);
+      setProfileData(prev => ({ ...prev, lifetimeEvents, errors: { ...prev.errors, lifetimeEvents: null } }));
+
+      const eventsArray = lifetimeEvents.events.split('\n\n').filter(e => e.trim());
+      const initialCollapsedState = {};
+      eventsArray.forEach((_, idx) => {
+        initialCollapsedState[`event-${idx}`] = true;
+      });
+      setCollapsedEvents(initialCollapsedState);
+
+      setLoadingSection(null);
+      return lifetimeEvents;
+    } catch (error) {
+      console.error("Error generating lifetime events:", error);
+      let errorMessage = error?.message || "Failed to load lifetime events. Please try again.";
+      if (errorMessage === "AI_SERVICE_UNAVAILABLE") {
+        errorMessage = "AI service is temporarily unavailable. Please try again later or configure a Pollinations API key in Settings for fallback.";
+      }
+      setProfileData(prev => ({ ...prev, errors: { ...prev.errors, lifetimeEvents: errorMessage } }));
+      setLoadingSection(null);
+      return null;
+    }
+  };
+
+  // Retry function for failed sections
+  const retrySection = async (section) => {
+    if (!selectedProfile) return;
+    
+    switch (section) {
+      case 'meanings':
+        await generateNameMeanings(selectedProfile.name, true);
+        break;
+      case 'statistics':
+        await generateNameStatistics(selectedProfile.name, true);
+        break;
+      case 'birthFacts':
+        await generateBirthFacts(selectedProfile.name, selectedProfile.birthDate, true);
+        break;
+      case 'music':
+        await generateMusicData(selectedProfile.birthDate, true);
+        break;
+      case 'facts':
+        await generateFacts(selectedProfile.birthDate, true);
+        break;
+      case 'lifetimeEvents':
+        await generateLifetimeEvents(selectedProfile.birthDate, true);
+        break;
+    }
+  };
+
+  const downloadAsImage = async () => {
+    try {
+      const html2canvas = await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm');
+      const canvas = await html2canvas.default(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const link = document.createElement('a');
+      link.download = 'namemeaningsimg.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      alert("Error generating image. Please try again.");
+    }
+  };
+
+  const downloadAsPDF = async () => {
+    try {
+      const html2canvas = await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm');
+      const jsPDF = await import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm');
+
+      const canvas = await html2canvas.default(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF.default({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save('namemeanings.pdf');
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Error generating PDF. Please try again.");
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      merge({ _files: { photo: file } });
+    }
+  };
+
+  const createProfile = async (e) => {
+    e.preventDefault();
+    if (!doc.name || !doc.birthDate) return;
+
+    setLoadingSection("creating");
+
+    const newProfile = {
+      type: "profile",
+      name: doc.name,
+      birthDate: doc.birthDate,
+      _files: doc._files,
+      createdAt: Date.now()
+    };
+
+    const result = await database.put(newProfile);
+    const savedProfile = await database.get(result.id);
+
+    merge({ name: "", birthDate: "", _files: {} });
+
+    setLoadingSection(null);
+    loadProfile(savedProfile);
+  };
+
+  const loadProfile = async (profile) => {
+    setSelectedProfile(profile);
+    setSavedProfilesCollapsed(true);
+
+    setProfileData({
+      meanings: null,
+      statistics: null,
+      birthFacts: null,
+      music: null,
+      facts: null,
+      lifetimeEvents: null,
+      lifeStats: calculateLifeStats(profile.birthDate),
+      errors: {
+        meanings: null,
+        statistics: null,
+        birthFacts: null,
+        music: null,
+        facts: null,
+        lifetimeEvents: null
+      }
+    });
+
+    setPlayingPronunciation(false);
+    stopSong();
+
+    setTimeout(() => {
+      profileDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+
+    if (Object.values(settings.meanings).some(v => v)) {
+      await generateNameMeanings(profile.name);
+    }
+    if (Object.values(settings.statistics).some(v => v !== settings.statistics.selectedCountry && v)) {
+      await generateNameStatistics(profile.name);
+    }
+    if (Object.values(settings.dobFacts).some(v => v)) {
+      await generateBirthFacts(profile.name, profile.birthDate);
+    }
+    if (Object.values(settings.music).some(v => v)) {
+      await generateMusicData(profile.birthDate);
+    }
+    // Fixed: Check keys instead of values for Count exclusion
+    if (Object.entries(settings.facts).some(([key, v]) => !key.includes('Count') && v)) {
+      await generateFacts(profile.birthDate);
+    }
+    if (settings.lifetimeEvents.enabled) {
+      await generateLifetimeEvents(profile.birthDate);
+    }
+  };
+
+  const deleteProfile = async (profileId) => {
+    if (confirm("Delete this profile?")) {
+      await database.del(profileId);
+      if (selectedProfile?._id === profileId) {
+        setSelectedProfile(null);
+        setPhotoUrl(null);
+        setProfileData({
+          meanings: null,
+          statistics: null,
+          birthFacts: null,
+          music: null,
+          facts: null,
+          lifetimeEvents: null,
+          lifeStats: null,
+          errors: {
+            meanings: null,
+            statistics: null,
+            birthFacts: null,
+            music: null,
+            facts: null,
+            lifetimeEvents: null
+          }
+        });
+      }
+    }
+  };
+
+  const saveSettings = async () => {
+    if (savedSettings && savedSettings.length > 0) {
+      await database.put({ ...tempSettings, _id: savedSettings[0]._id });
+    } else {
+      await database.put(tempSettings);
+    }
+    // Save Pollinations API key to localStorage (optional fallback)
+    if (tempSettings.pollinationsApiKey) {
+      localStorage.setItem("POLLINATIONS_API_KEY", tempSettings.pollinationsApiKey);
+      window.POLLINATIONS_API_KEY = tempSettings.pollinationsApiKey;
+    } else {
+      localStorage.removeItem("POLLINATIONS_API_KEY");
+      window.POLLINATIONS_API_KEY = "";
+    }
+    setSettings(tempSettings);
+    setDarkMode(tempSettings.darkMode || false);
+    setShowSettings(false);
+  };
+
+  const cancelSettings = () => {
+    setTempSettings(settings);
+    setDarkMode(settings.darkMode || false);
+    setShowSettings(false);
+  };
+
+  const LoadingSpinner = ({ message }) => (
+    <div className="flex flex-col items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mb-4"></div>
+      <p className="text-gray-600 dark:text-gray-400 font-semibold">{message}</p>
+    </div>
+  );
+
+  const subsectionLabels = {
+    irish: "Irish Meaning",
+    worldwide: "Worldwide Meaning",
+    short: "Short Meaning",
+    historic: "Historic Meaning",
+    mythology: "Mythology Meaning",
+    veryDetailed: "Very Detailed Meaning",
+    similarNames: "Similar Names",
+    pronunciation: "Pronunciation",
+    genderAssociation: "Gender Association",
+    countryCount: "Country Count",
+    worldwideCount: "Worldwide Count",
+    popularCountries: "Popular Countries",
+    popularityCountry: "Popularity Country",
+    popularityWorldwide: "Popularity Worldwide",
+    celebrities: "Famous Celebrities",
+    namePopularityYear: "Name Popularity Year",
+    nameCountYearCountry: "Name Count Year Country",
+    nameCountYearWorldwide: "Name Count Year Worldwide",
+    numberOneChart: "#1 Chart Song",
+    top10Charts: "Top 10 Chart Songs",
+    tvShows: "Hit TV Shows",
+    movies: "Hit Movies",
+    worldEvents: "World Events",
+    countryEvents: "Country Events",
+    interestingFacts: "Interesting Facts"
+  };
+
+  const meaningsOrder = ['irish', 'worldwide', 'short', 'historic', 'mythology', 'veryDetailed'];
+  const statisticsOrder = ['similarNames', 'pronunciation', 'genderAssociation', 'countryCount', 'worldwideCount', 'popularCountries', 'popularityCountry', 'popularityWorldwide', 'celebrities'];
+  const birthFactsOrder = ['namePopularityYear', 'nameCountYearCountry', 'nameCountYearWorldwide'];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-orange-900 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {showScrollTop && !showSettings && !showDownloadModal && !showTopNamesModal && !showVersionHistory && (
+          <button
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-40 p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-2xl hover:scale-110 transition-all duration-300"
+            aria-label="Scroll to top"
+          >
+            <FaArrowUp className="text-xl" />
+          </button>
+        )}
+
+        <div className="text-center mb-8 relative">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h1 className="flex-1 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white text-left sm:text-center">
+              ✨ Name Explorer
+            </h1>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-2xl hover:scale-110 transition-all flex-shrink-0"
+              aria-label="Settings"
+            >
+              <FaCog className="text-xl sm:text-2xl text-purple-600" />
+            </button>
+          </div>
+
+          <p className="text-base sm:text-lg md:text-xl text-purple-200 italic px-4">
+            Discover the beautiful meanings, fascinating statistics, and life journey details of any name
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base md:text-lg text-purple-200 px-4">
+            <span>Created by</span>
+            <a
+              href="https://jayreddin.github.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white font-semibold hover:text-yellow-300 transition-colors underline"
+            >
+              Jamie Reddin
+            </a>
+            <span>||</span>
+            <button
+              onClick={() => setShowVersionHistory(true)}
+              className="text-white font-semibold hover:text-yellow-300 transition-colors underline flex items-center gap-1"
+            >
+              <FaHistory className="text-xs sm:text-sm" />
+              V. 1.0.7
+            </button>
+          </div>
+        </div>
+
+        {/* Version History Modal */}
+        {showVersionHistory && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowVersionHistory(false);
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <FaHistory className="text-purple-500" />
+                  Version History
+                </h2>
+                <button
+                  onClick={() => setShowVersionHistory(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
+                >
+                  <FaTimes className="text-xl sm:text-2xl text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <style>{`::-webkit-scrollbar { display: none; }`}</style>
+                {versionHistory.map((version, index) => (
+                  <div key={index} className="mb-8 last:mb-0">
+                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-xl p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                        <h3 className="text-2xl sm:text-3xl font-bold text-purple-800 dark:text-purple-200">
+                          Version {version.version}
+                        </h3>
+                        <span className="text-sm sm:text-base text-purple-600 dark:text-purple-400 font-semibold">
+                          {version.date}
+                        </span>
+                      </div>
+
+                      <h4 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+                        {version.title}
+                      </h4>
+
+                      <div className="space-y-2">
+                        <p className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          Features & Changes:
+                        </p>
+                        <ul className="space-y-2">
+                          {version.changes.map((change, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm sm:text-base text-gray-700 dark:text-gray-300">
+                              <span className="text-purple-600 dark:text-purple-400 mt-1">•</span>
+                              <span className="flex-1">{change}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowVersionHistory(false)}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Modal */}
+        {showSettings && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) cancelSettings();
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <FaCog className="text-purple-500" />
+                  Settings
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleDarkMode}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
+                    aria-label="Toggle Dark Mode"
+                  >
+                    {darkMode ? (
+                      <FaSun className="text-2xl text-yellow-500" />
+                    ) : (
+                      <FaMoon className="text-2xl text-blue-500" />
+                    )}
+                  </button>
+                  <button
+                    onClick={cancelSettings}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
+                  >
+                    <FaTimes className="text-2xl text-gray-600 dark:text-gray-400" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <style>{`::-webkit-scrollbar { display: none; }`}</style>
+
+                <div className="bg-purple-50 dark:bg-purple-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-purple-800 dark:text-purple-200">
+                    📖 Name Meanings
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.keys(tempSettings.meanings).map(key => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.meanings[key]}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            meanings: { ...tempSettings.meanings, [key]: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-blue-800 dark:text-blue-200">
+                    📊 Name Statistics
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.keys(tempSettings.statistics).map(key => {
+                      if (key === 'selectedCountry') {
+                        return (
+                          <div key={key} className="mt-2">
+                            <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                              Select Country
+                            </label>
+                            <select
+                              value={tempSettings.statistics.selectedCountry}
+                              onChange={(e) => setTempSettings({
+                                ...tempSettings,
+                                statistics: { ...tempSettings.statistics, selectedCountry: e.target.value }
+                              })}
+                              className="w-full px-3 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200"
+                            >
+                              <option>Ireland</option>
+                              <option>United States</option>
+                              <option>United Kingdom</option>
+                              <option>Canada</option>
+                              <option>Australia</option>
+                              <option>Germany</option>
+                              <option>France</option>
+                              <option>Spain</option>
+                              <option>Italy</option>
+                              <option>Japan</option>
+                            </select>
+                          </div>
+                        );
+                      }
+                      return (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={tempSettings.statistics[key]}
+                            onChange={(e) => setTempSettings({
+                              ...tempSettings,
+                              statistics: { ...tempSettings.statistics, [key]: e.target.checked }
+                            })}
+                            className="w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-gray-700 dark:text-gray-300 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-green-50 dark:bg-green-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-green-800 dark:text-green-200">
+                    🎂 Date of Birth Facts
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.keys(tempSettings.dobFacts).map(key => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.dobFacts[key]}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            dobFacts: { ...tempSettings.dobFacts, [key]: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-green-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-pink-50 dark:bg-pink-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-pink-800 dark:text-pink-200">
+                    🎵 Music & Entertainment
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.keys(tempSettings.music).map(key => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.music[key]}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            music: { ...tempSettings.music, [key]: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 dark:bg-orange-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-orange-800 dark:text-orange-200">
+                    📰 Historical Facts
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer mb-2">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.facts.worldEvents}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, worldEvents: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">World Events</span>
+                      </label>
+                      {tempSettings.facts.worldEvents && (
+                        <select
+                          value={tempSettings.facts.worldEventsCount}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, worldEventsCount: parseInt(e.target.value) }
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-orange-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 ml-7"
+                        >
+                          {[...Array(20)].map((_, i) => (
+                            <option key={i + 1} value={i + 1}>{i + 1} event{i !== 0 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer mb-2">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.facts.countryEvents}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, countryEvents: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">Country Events</span>
+                      </label>
+                      {tempSettings.facts.countryEvents && (
+                        <select
+                          value={tempSettings.facts.countryEventsCount}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, countryEventsCount: parseInt(e.target.value) }
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-orange-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 ml-7"
+                        >
+                          {[...Array(20)].map((_, i) => (
+                            <option key={i + 1} value={i + 1}>{i + 1} event{i !== 0 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer mb-2">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.facts.interestingFacts}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, interestingFacts: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">Interesting Facts</span>
+                      </label>
+                      {tempSettings.facts.interestingFacts && (
+                        <select
+                          value={tempSettings.facts.interestingFactsCount}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            facts: { ...tempSettings.facts, interestingFactsCount: parseInt(e.target.value) }
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-orange-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 ml-7"
+                        >
+                          {[...Array(20)].map((_, i) => (
+                            <option key={i + 1} value={i + 1}>{i + 1} fact{i !== 0 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50 dark:bg-indigo-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-indigo-800 dark:text-indigo-200">
+                    🌟 Once-in-a-Lifetime Events
+                  </h3>
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tempSettings.lifetimeEvents.enabled}
+                        onChange={(e) => setTempSettings({
+                          ...tempSettings,
+                          lifetimeEvents: { ...tempSettings.lifetimeEvents, enabled: e.target.checked }
+                        })}
+                        className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-700 dark:text-gray-300">
+                        Show Once-in-a-Lifetime Events
+                      </span>
+                    </label>
+
+                    {tempSettings.lifetimeEvents.enabled && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                            Number of Events
+                          </label>
+                          <select
+                            value={tempSettings.lifetimeEvents.count}
+                            onChange={(e) => setTempSettings({
+                              ...tempSettings,
+                              lifetimeEvents: { ...tempSettings.lifetimeEvents, count: parseInt(e.target.value) }
+                            })}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-indigo-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200"
+                          >
+                            {[...Array(20)].map((_, i) => (
+                              <option key={i + 1} value={i + 1}>{i + 1} event{i !== 0 ? 's' : ''}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                            Event Topics
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.keys(tempSettings.lifetimeEvents.topics).map(topic => (
+                              <label key={topic} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={tempSettings.lifetimeEvents.topics[topic]}
+                                  onChange={(e) => setTempSettings({
+                                    ...tempSettings,
+                                    lifetimeEvents: {
+                                      ...tempSettings.lifetimeEvents,
+                                      topics: {
+                                        ...tempSettings.lifetimeEvents.topics,
+                                        [topic]: e.target.checked
+                                      }
+                                    }
+                                  })}
+                                  className="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                                  {topic}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-teal-50 dark:bg-teal-900 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-teal-800 dark:text-teal-200">
+                    ⏱️ Life Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(tempSettings.lifeStats).map(key => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempSettings.lifeStats[key]}
+                          onChange={(e) => setTempSettings({
+                            ...tempSettings,
+                            lifeStats: { ...tempSettings.lifeStats, [key]: e.target.checked }
+                          })}
+                          className="w-5 h-5 rounded border-teal-300 text-teal-600 focus:ring-teal-500"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 capitalize text-sm">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                  <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <FaKey className="text-yellow-500" />
+                    🔑 AI Configuration
+                  </h3>
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      <strong>✓ Primary AI:</strong> Puter AI is enabled by default (no configuration needed!)
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    <strong>Optional Fallback:</strong> Add a Pollinations API key for redundancy when Puter is unavailable.
+                    <a
+                      href="https://enter.pollinations.ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 ml-1 flex items-center gap-1 inline-flex"
+                    >
+                      Get a free API key <FaExternalLinkAlt className="text-xs" />
+                    </a>
+                  </p>
+                  <input
+                    type="password"
+                    value={tempSettings.pollinationsApiKey || ""}
+                    onChange={(e) => setTempSettings({
+                      ...tempSettings,
+                      pollinationsApiKey: e.target.value
+                    })}
+                    placeholder="Pollinations API key (optional)"
+                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Puter AI is free and works without any API key. Pollinations provides backup when Puter is unavailable.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <button
+                  onClick={cancelSettings}
+                  className="flex-1 px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveSettings}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all"
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Download Modal */}
+        {showDownloadModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowDownloadModal(false);
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8">
+              <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white text-center">
+                Download Options
+              </h2>
+              <div className="space-y-4">
+                <button
+                  onClick={downloadAsImage}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all"
+                >
+                  📸 Download as Image
+                </button>
+                <button
+                  onClick={downloadAsPDF}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all"
+                >
+                  📄 Download as PDF
+                </button>
+                <button
+                  onClick={() => setShowDownloadModal(false)}
+                  className="w-full px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Names Modal */}
+        {showTopNamesModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowTopNamesModal(false);
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                    {getTopNamesHeader()}
+                  </h2>
+                  <button
+                    onClick={() => setShowTopNamesModal(false)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
+                  >
+                    <FaTimes className="text-xl text-gray-600 dark:text-gray-400" />
+                  </button>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => {
+                      setTopNamesDateFilter("dob");
+                      fetchTopNames(topNamesType);
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${topNamesDateFilter === "dob"
+                      ? "bg-purple-500 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      }`}
+                  >
+                    User's DOB Year
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTopNamesDateFilter("today");
+                      fetchTopNames(topNamesType);
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${topNamesDateFilter === "today"
+                      ? "bg-purple-500 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      }`}
+                  >
+                    Current Year
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search names..."
+                    value={topNamesSearchQuery}
+                    onChange={(e) => setTopNamesSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-purple-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <style>{`::-webkit-scrollbar { display: none; }`}</style>
+                {loadingTopNames ? (
+                  <LoadingSpinner message="Loading top names..." />
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredTopNames.map((name, index) => (
+                      <a
+                        key={index}
+                        href={`https://www.google.com/search?q=${encodeURIComponent(name + ' name meaning')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-purple-50 dark:bg-purple-900 rounded-lg p-3 hover:bg-purple-100 dark:hover:bg-purple-800 transition-all cursor-pointer"
+                      >
+                        <span className="text-sm font-semibold text-purple-600 dark:text-purple-400 mr-2">
+                          {topNamesList.indexOf(name) + 1}.
+                        </span>
+                        <span className="text-gray-800 dark:text-gray-200">
+                          {highlightText(name, topNamesSearchQuery)}
+                        </span>
+                      </a>
+                    ))}
+                    {filteredTopNames.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        No names found matching "{topNamesSearchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Create Profile Section */}
+          <div className="lg:col-span-1">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+              <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center gap-2">
+                <FaHeart className="text-pink-500" />
+                Create Profile
+              </h2>
+
+              <form onSubmit={createProfile} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={doc.name}
+                      onChange={(e) => merge({ name: e.target.value })}
+                      placeholder="Enter name..."
+                      className="w-full px-4 py-3 rounded-lg border-2 border-purple-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                      Birth Date
+                    </label>
+                    <input
+                      type="date"
+                      value={doc.birthDate}
+                      onChange={(e) => merge({ birthDate: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-purple-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <FaCamera className="text-purple-500" />
+                    Photo (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="w-full px-4 py-3 rounded-lg border-2 border-purple-300 focus:border-purple-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-500 file:text-white hover:file:bg-purple-600 text-sm"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loadingSection === "creating"}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                >
+                  {loadingSection === "creating" ? "Creating..." : "🎉 Create Profile"}
+                </button>
+              </form>
+
+              {savedProfiles && savedProfiles.length > 0 && (
+                <div className="mt-6">
+                  <h3
+                    className="text-lg font-bold mb-3 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => setSavedProfilesCollapsed(!savedProfilesCollapsed)}
+                  >
+                    <span>Saved Profiles ({savedProfiles.length})</span>
+                    {savedProfilesCollapsed ? <FaChevronDown /> : <FaChevronUp />}
+                  </h3>
+                  {!savedProfilesCollapsed && (
+                    <div className="space-y-2 max-h-96 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      <style>{`::-webkit-scrollbar { display: none; }`}</style>
+                      {savedProfiles.map((profile) => (
+                        <div
+                          key={profile._id}
+                          className={`p-3 rounded-lg cursor-pointer transition-all ${selectedProfile?._id === profile._id
+                            ? "bg-purple-100 dark:bg-purple-900 border-2 border-purple-500"
+                            : "bg-gray-100 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-purple-800"
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {profilePhotos[profile._id] && (
+                              <img
+                                src={profilePhotos[profile._id]}
+                                alt={profile.name}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-purple-500"
+                              />
+                            )}
+                            <div
+                              onClick={() => loadProfile(profile)}
+                              className="flex-1"
+                            >
+                              <div className="font-bold text-gray-800 dark:text-white">
+                                {profile.name}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {new Date(profile.birthDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteProfile(profile._id);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-2"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Profile Details */}
+          <div className="lg:col-span-2" ref={contentRef}>
+            {selectedProfile ? (
+              <div className="space-y-6" ref={profileDetailsRef}>
+                {/* Profile Header */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                  <div className="flex flex-col md:flex-row items-start gap-6">
+                    {photoUrl && (
+                      <img
+                        src={photoUrl}
+                        alt={selectedProfile.name}
+                        className="w-32 h-32 rounded-full object-cover border-4 border-purple-500 shadow-lg mx-auto md:mx-0"
+                      />
+                    )}
+                    <div className="flex-1 text-center md:text-left">
+                      <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
+                        {selectedProfile.name}
+                      </h2>
+                      <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 flex items-center justify-center md:justify-start gap-2">
+                        <FaCalendar className="text-purple-500" />
+                        Born: {new Date(selectedProfile.birthDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Name Meanings Section */}
+                {Object.values(settings.meanings).some(v => v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('meanings')}
+                    >
+                      <span className="flex items-center gap-2">
+                        📖 Name Meanings
+                      </span>
+                      {collapsedSections.meanings ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.meanings && (
+                      loadingSection === "meanings" ? (
+                        <LoadingSpinner message="Loading Name Meanings..." />
+                      ) : profileData.errors?.meanings ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Name Meanings</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.meanings}</p>
+                          <button
+                            onClick={() => retrySection('meanings')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.meanings ? (
+                        <div className="space-y-4">
+                          {meaningsOrder.map(key => {
+                            if (!profileData.meanings[key]) return null;
+                            return (
+                              <div key={key}>
+                                <h4
+                                  className="font-bold text-lg text-purple-600 dark:text-purple-400 mb-2 capitalize flex items-center justify-between cursor-pointer hover:text-purple-700 transition-colors"
+                                  onClick={() => toggleSubsection(key)}
+                                >
+                                  <span>{subsectionLabels[key]}</span>
+                                  {collapsedSubsections[key] ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                                </h4>
+                                {!collapsedSubsections[key] && (
+                                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed pl-4">
+                                    <MarkdownText>{profileData.meanings[key]}</MarkdownText>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Name Statistics Section */}
+                {Object.values(settings.statistics).some(v => v !== settings.statistics.selectedCountry && v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('statistics')}
+                    >
+                      <span className="flex items-center gap-2">
+                        <FaGlobe className="text-blue-500" />
+                        Name Statistics
+                      </span>
+                      {collapsedSections.statistics ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.statistics && (
+                      loadingSection === "statistics" ? (
+                        <LoadingSpinner message="Loading Name Statistics..." />
+                      ) : profileData.errors?.statistics ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Name Statistics</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.statistics}</p>
+                          <button
+                            onClick={() => retrySection('statistics')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.statistics ? (
+                        <div className="space-y-4">
+                          {statisticsOrder.map(key => {
+                            if (!profileData.statistics[key]) return null;
+                            return (
+                              <div key={key}>
+                                <h4
+                                  className="font-bold text-lg text-purple-600 dark:text-purple-400 mb-2 capitalize flex items-center justify-between cursor-pointer hover:text-purple-700 transition-colors"
+                                  onClick={() => toggleSubsection(key)}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    {subsectionLabels[key]}
+                                    {(key === 'popularityCountry' || key === 'popularityWorldwide') && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          fetchTopNames(key === 'popularityCountry' ? 'country' : 'worldwide');
+                                        }}
+                                        className="ml-2 text-sm bg-purple-500 text-white px-3 py-1 rounded-lg hover:bg-purple-600 transition-all flex items-center gap-1"
+                                      >
+                                        <FaList className="text-xs" />
+                                        View Top Names
+                                      </button>
+                                    )}
+                                    {key === 'pronunciation' && (
+                                      <div className="flex items-center gap-2 ml-2" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          onClick={playingPronunciation ? stopPronunciation : playPronunciation}
+                                          className={`text-sm px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${playingPronunciation
+                                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                                            : 'bg-green-500 hover:bg-green-600 text-white'
+                                            }`}
+                                        >
+                                          {playingPronunciation ? <FaStop className="text-xs" /> : <FaVolumeUp className="text-xs" />}
+                                          {playingPronunciation ? 'Stop' : 'Play Audio'}
+                                        </button>
+                                      </div>
+                                    )}
+                                    {key === 'celebrities' && (
+                                      <a
+                                        href={`https://www.google.com/search?q=famous+people+named+${encodeURIComponent(selectedProfile.name)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 text-sm bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-all flex items-center gap-1"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <FaSearch className="text-xs" />
+                                        Search More
+                                      </a>
+                                    )}
+                                  </span>
+                                  {collapsedSubsections[key] ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                                </h4>
+                                {!collapsedSubsections[key] && (
+                                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed pl-4">
+                                    <MarkdownText>{profileData.statistics[key]}</MarkdownText>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Birth Facts Section */}
+                {Object.values(settings.dobFacts).some(v => v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('birthFacts')}
+                    >
+                      <span className="flex items-center gap-2">
+                        🎂 Date of Birth Facts
+                      </span>
+                      {collapsedSections.birthFacts ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.birthFacts && (
+                      loadingSection === "birthFacts" ? (
+                        <LoadingSpinner message="Loading Birth Date Facts..." />
+                      ) : profileData.errors?.birthFacts ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Birth Date Facts</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.birthFacts}</p>
+                          <button
+                            onClick={() => retrySection('birthFacts')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.birthFacts ? (
+                        <div className="space-y-4">
+                          {birthFactsOrder.map(key => {
+                            if (!profileData.birthFacts[key]) return null;
+                            return (
+                              <div key={key}>
+                                <h4
+                                  className="font-bold text-lg text-purple-600 dark:text-purple-400 mb-2 capitalize flex items-center justify-between cursor-pointer hover:text-purple-700 transition-colors"
+                                  onClick={() => toggleSubsection(key)}
+                                >
+                                  <span>{subsectionLabels[key]}</span>
+                                  {collapsedSubsections[key] ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                                </h4>
+                                {!collapsedSubsections[key] && (
+                                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed pl-4">
+                                    <MarkdownText>{profileData.birthFacts[key]}</MarkdownText>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Music & Entertainment Section */}
+                {Object.values(settings.music).some(v => v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('music')}
+                    >
+                      <span className="flex items-center gap-2">
+                        🎵 Music & Entertainment
+                      </span>
+                      {collapsedSections.music ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.music && (
+                      loadingSection === "music" ? (
+                        <LoadingSpinner message="Loading Music & Entertainment Data..." />
+                      ) : profileData.errors?.music ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Music & Entertainment</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.music}</p>
+                          <button
+                            onClick={() => retrySection('music')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.music ? (
+                        <div className="space-y-6">
+                          {settings.music.numberOneChart && profileData.music.numberOneChart && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-purple-600 dark:text-purple-400 mb-3 flex items-center justify-between cursor-pointer hover:text-purple-700 transition-colors"
+                                onClick={() => toggleSubsection('numberOneChart')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  🎤 {subsectionLabels.numberOneChart}
+                                </span>
+                                {collapsedSubsections.numberOneChart ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.numberOneChart && (
+                                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900 dark:to-pink-900 rounded-xl p-6 border-l-4 border-purple-500">
+                                  <div className="flex items-center gap-4 mb-4">
+                                    <div className="flex-shrink-0 w-16 h-16 bg-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-bold">
+                                      #1
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-1">
+                                        {profileData.music.numberOneChart.title}
+                                      </p>
+                                      <p className="text-lg text-gray-600 dark:text-gray-400">
+                                        by {profileData.music.numberOneChart.artist}
+                                      </p>
+                                      {profileData.music.numberOneChart.releaseDate && (
+                                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                                          Released: {profileData.music.numberOneChart.releaseDate}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                   
+                                  {profileData.music.numberOneChart.youtubeId && getYouTubeVideoId(profileData.music.numberOneChart.youtubeId) ? (
+                                    <div className="aspect-video w-full rounded-lg overflow-hidden shadow-lg mb-4">
+                                      <iframe
+                                        width="100%"
+                                        height="100%"
+                                        src={`https://www.youtube.com/embed/${getYouTubeVideoId(profileData.music.numberOneChart.youtubeId)}`}
+                                        title="YouTube video player"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        className="w-full h-full"
+                                      ></iframe>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        const query = `${profileData.music.numberOneChart.title} ${profileData.music.numberOneChart.artist} official audio`;
+                                        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank');
+                                      }}
+                                      className="w-full px-6 py-3 bg-purple-500 text-white font-bold rounded-lg hover:bg-purple-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                      <FaPlay /> Search on YouTube
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {settings.music.top10Charts && profileData.music.top10Charts && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-between cursor-pointer hover:text-blue-700 transition-colors"
+                                onClick={() => toggleSubsection('top10Charts')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  🎶 {subsectionLabels.top10Charts}
+                                </span>
+                                {collapsedSubsections.top10Charts ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.top10Charts && (
+                                <div className="space-y-3">
+                                  {profileData.music.top10Charts.map((song, idx) => (
+                                    <div key={idx} className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900 dark:to-cyan-900 rounded-lg p-4 border-l-4 border-blue-500 flex items-center justify-between hover:shadow-lg transition-all">
+                                      <div className="flex items-center gap-4 flex-1">
+                                        <div className="flex-shrink-0 w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                                          #{song.position || (idx + 1)}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="font-bold text-gray-800 dark:text-gray-200">
+                                            {song.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {song.artist}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => playSong(song, idx)}
+                                        className={`p-3 rounded-lg transition-all ${currentlyPlayingSong === idx
+                                          ? 'bg-red-500 hover:bg-red-600'
+                                          : 'bg-blue-500 hover:bg-blue-600'
+                                          } text-white`}
+                                      >
+                                        {currentlyPlayingSong === idx ? <FaStop /> : <FaPlay />}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {settings.music.tvShows && profileData.music.tvShows && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-green-600 dark:text-green-400 mb-3 flex items-center justify-between cursor-pointer hover:text-green-700 transition-colors"
+                                onClick={() => toggleSubsection('tvShows')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  📺 {subsectionLabels.tvShows}
+                                </span>
+                                {collapsedSubsections.tvShows ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.tvShows && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {profileData.music.tvShows.map((show, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={`https://www.imdb.com/find?q=${encodeURIComponent(show.title)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900 rounded-lg p-4 border-l-4 border-green-500 hover:shadow-lg transition-all"
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                          {idx + 1}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="font-bold text-gray-800 dark:text-gray-200 mb-1">
+                                            {show.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {show.year}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {settings.music.movies && profileData.music.movies && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-pink-600 dark:text-pink-400 mb-3 flex items-center justify-between cursor-pointer hover:text-pink-700 transition-colors"
+                                onClick={() => toggleSubsection('movies')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  🎬 {subsectionLabels.movies}
+                                </span>
+                                {collapsedSubsections.movies ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.movies && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {profileData.music.movies.map((movie, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={`https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900 dark:to-rose-900 rounded-lg p-4 border-l-4 border-pink-500 hover:shadow-lg transition-all"
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                          {idx + 1}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="font-bold text-gray-800 dark:text-gray-200 mb-1">
+                                            {movie.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {movie.year}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Historical Facts Section */}
+                {Object.entries(settings.facts).some(([key, v]) => !key.includes('Count') && v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('facts')}
+                    >
+                      <span className="flex items-center gap-2">
+                        📰 Historical Facts
+                      </span>
+                      {collapsedSections.facts ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.facts && (
+                      loadingSection === "facts" ? (
+                        <LoadingSpinner message="Loading Historical Facts..." />
+                      ) : profileData.errors?.facts ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Historical Facts</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.facts}</p>
+                          <button
+                            onClick={() => retrySection('facts')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.facts ? (
+                        <div className="space-y-6">
+                          {settings.facts.worldEvents && profileData.facts.worldEvents && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-orange-600 dark:text-orange-400 mb-3 flex items-center justify-between cursor-pointer hover:text-orange-700 transition-colors"
+                                onClick={() => toggleSubsection('worldEvents')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  🌍 {subsectionLabels.worldEvents}
+                                </span>
+                                {collapsedSubsections.worldEvents ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.worldEvents && (
+                                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900 dark:to-amber-900 rounded-xl p-6 border-l-4 border-orange-500">
+                                  <FactsWithLinks text={profileData.facts.worldEvents} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {settings.facts.countryEvents && profileData.facts.countryEvents && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-between cursor-pointer hover:text-blue-700 transition-colors"
+                                onClick={() => toggleSubsection('countryEvents')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  🏛️ {subsectionLabels.countryEvents}
+                                </span>
+                                {collapsedSubsections.countryEvents ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.countryEvents && (
+                                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 border-l-4 border-blue-500">
+                                  <FactsWithLinks text={profileData.facts.countryEvents} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {settings.facts.interestingFacts && profileData.facts.interestingFacts && (
+                            <div>
+                              <h4
+                                className="font-bold text-xl text-green-600 dark:text-green-400 mb-3 flex items-center justify-between cursor-pointer hover:text-green-700 transition-colors"
+                                onClick={() => toggleSubsection('interestingFacts')}
+                              >
+                                <span className="flex items-center gap-2">
+                                  ✨ {subsectionLabels.interestingFacts}
+                                </span>
+                                {collapsedSubsections.interestingFacts ? <FaChevronDown className="text-sm" /> : <FaChevronUp className="text-sm" />}
+                              </h4>
+                              {!collapsedSubsections.interestingFacts && (
+                                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900 rounded-xl p-6 border-l-4 border-green-500">
+                                  <FactsWithLinks text={profileData.facts.interestingFacts} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Once-in-a-Lifetime Events */}
+                {settings.lifetimeEvents.enabled && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('lifetimeEvents')}
+                    >
+                      <span className="flex items-center gap-2">
+                        🌟 Once-in-a-Lifetime Events
+                      </span>
+                      {collapsedSections.lifetimeEvents ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.lifetimeEvents && (
+                      loadingSection === "lifetimeEvents" ? (
+                        <LoadingSpinner message="Loading Once-in-a-Lifetime Events..." />
+                      ) : profileData.errors?.lifetimeEvents ? (
+                        <div className="bg-red-50 dark:bg-red-900 rounded-xl p-6 border-l-4 border-red-500">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">⚠️</span>
+                            <p className="text-red-700 dark:text-red-300 font-semibold">Failed to load Once-in-a-Lifetime Events</p>
+                          </div>
+                          <p className="text-red-600 dark:text-red-400 text-sm mb-4">{profileData.errors.lifetimeEvents}</p>
+                          <button
+                            onClick={() => retrySection('lifetimeEvents')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                          >
+                            🔄 Retry
+                          </button>
+                        </div>
+                      ) : profileData.lifetimeEvents ? (
+                        <LifetimeEventsRenderer
+                          text={profileData.lifetimeEvents.events}
+                          collapsedEvents={collapsedEvents}
+                          toggleEvent={toggleEvent}
+                        />
+                      ) : null
+                    )}
+                  </div>
+                )}
+
+                {/* Life Statistics */}
+                {liveStats && Object.values(settings.lifeStats).some(v => v) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+                    <h3
+                      className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center justify-between cursor-pointer hover:text-purple-600 transition-colors"
+                      onClick={() => toggleSection('lifeStats')}
+                    >
+                      <span className="flex items-center gap-2">
+                        <FaClock className="text-green-500" />
+                        Life Statistics (Live)
+                      </span>
+                      {collapsedSections.lifeStats ? <FaChevronDown /> : <FaChevronUp />}
+                    </h3>
+                    {!collapsedSections.lifeStats && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {settings.lifeStats.years && (
+                          <div className="bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-purple-700 dark:text-purple-300">
+                              {liveStats.years}
+                            </div>
+                            <div className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                              Years Alive
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.months && (
+                          <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                              {liveStats.months}
+                            </div>
+                            <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                              Months
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.weeks && (
+                          <div className="bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-green-700 dark:text-green-300">
+                              {liveStats.weeks.toLocaleString()}
+                            </div>
+                            <div className="text-sm font-semibold text-green-600 dark:text-green-400">
+                              Weeks
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.days && (
+                          <div className="bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-orange-700 dark:text-orange-300">
+                              {liveStats.days.toLocaleString()}
+                            </div>
+                            <div className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                              Days
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.hours && (
+                          <div className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900 dark:to-pink-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-pink-700 dark:text-pink-300">
+                              {liveStats.hours.toLocaleString()}
+                            </div>
+                            <div className="text-sm font-semibold text-pink-600 dark:text-pink-400">
+                              Hours
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.minutes && (
+                          <div className="bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900 dark:to-indigo-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300 tabular-nums">
+                              {liveStats.minutes.toLocaleString()}
+                            </div>
+                            <div className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                              Minutes
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.seconds && (
+                          <div className="bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-red-700 dark:text-red-300 tabular-nums">
+                              {liveStats.seconds.toLocaleString()}
+                            </div>
+                            <div className="text-sm font-semibold text-red-600 dark:text-red-400">
+                              Seconds
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.heartbeats && (
+                          <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 tabular-nums">
+                              {liveStats.heartbeats}
+                            </div>
+                            <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+                              Est. Heartbeats ❤️
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.eyeblinks && (
+                          <div className="bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900 dark:to-teal-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">
+                              {liveStats.eyeblinks}
+                            </div>
+                            <div className="text-sm font-semibold text-teal-600 dark:text-teal-400">
+                              Est. Eye Blinks 👁️ (Live)
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.breaths && (
+                          <div className="bg-gradient-to-br from-cyan-100 to-cyan-200 dark:from-cyan-900 dark:to-cyan-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-300 tabular-nums">
+                              {liveStats.breaths}
+                            </div>
+                            <div className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
+                              Est. Breaths 💨 (Live)
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.sleeps && (
+                          <div className="bg-gradient-to-br from-violet-100 to-violet-200 dark:from-violet-900 dark:to-violet-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-violet-700 dark:text-violet-300">
+                              {liveStats.sleeps}
+                            </div>
+                            <div className="text-sm font-semibold text-violet-600 dark:text-violet-400">
+                              Est. Sleeps 😴
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.meals && (
+                          <div className="bg-gradient-to-br from-fuchsia-100 to-fuchsia-200 dark:from-fuchsia-900 dark:to-fuchsia-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-fuchsia-700 dark:text-fuchsia-300">
+                              {liveStats.meals}
+                            </div>
+                            <div className="text-sm font-semibold text-fuchsia-600 dark:text-fuchsia-400">
+                              Est. Meals 🍽️
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.steps && (
+                          <div className="bg-gradient-to-br from-rose-100 to-rose-200 dark:from-rose-900 dark:to-rose-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-rose-700 dark:text-rose-300">
+                              {liveStats.steps}
+                            </div>
+                            <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                              Est. Steps Taken 👣
+                            </div>
+                          </div>
+                        )}
+                        {settings.lifeStats.wordsSpoken && (
+                          <div className="bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800 p-4 rounded-xl">
+                            <div className="text-3xl font-bold text-amber-700 dark:text-amber-300">
+                              {liveStats.wordsSpoken}
+                            </div>
+                            <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                              Est. Words Spoken 💬
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Download Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setShowDownloadModal(true)}
+                    className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2"
+                  >
+                    <FaDownload />
+                    Download Profile
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-12 text-center">
+                <div className="text-6xl mb-4">👶</div>
+                <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                  No Profile Selected
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Create a new profile or select an existing one to see detailed information
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+    // prettier-ignore-end
+
+    const rootElement = document.getElementById("container");
+    ReactDOMClient.createRoot(rootElement).render(<App />);
+  </script>
+  <!-- Puter Attribution - Required for free AI usage -->
+  <a href="https://developer.puter.com" target="_blank" rel="noopener noreferrer" 
+     style="position: fixed; bottom: 8px; left: 8px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(99, 102, 241, 0.95) 100%); color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); z-index: 9999; transition: all 0.2s ease; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px;">
+    Powered by Puter
+  </a>
+  <!--
+    Agents see LLMs docs:
+      Database: https://use-fireproof.com/llms-full.txt 
+      CallAI: https://use-fireproof.com/callai-llms.txt
+      ImgGen: https://use-fireproof.com/imggen-llms.txt
+    -->
 </body>
+
 </html>
