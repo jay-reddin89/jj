@@ -1,1 +1,8 @@
 node_modules
+
+# Logs
+*.log
+firebase-debug.log
+
+# Local editor / tool config with local tokens
+.vscode/
